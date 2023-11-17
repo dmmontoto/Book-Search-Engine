@@ -1,7 +1,8 @@
 const express = require('express');
+const { ApolloServer } = require('apollo-server-express');
 const path = require('path');
-const db = require('./config/connection');
-const routes = require('./routes');
+const { authMiddleware } = require('./utils/auth');
+const { typeDefs, resolvers } = require('./graphql/schema');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -14,8 +15,18 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/build')));
 }
 
-app.use(routes);
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  context: authMiddleware, // Apply the authentication middleware to the context
+});
 
-db.once('open', () => {
-  app.listen(PORT, () => console.log(`🌍 Now listening on localhost:${PORT}`));
+server.applyMiddleware({ app });
+
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, '../client/build/index.html'));
+});
+
+app.listen(PORT, () => {
+  console.log(`🌍 Now listening on localhost:${PORT}`);
 });
