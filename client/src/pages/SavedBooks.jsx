@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from '@apollo/client';
-import { GET_ME } from '../path-to-your-queries-file/queries'; // Update the path accordingly
-import { REMOVE_BOOK } from '../path-to-your-mutations-file/mutations'; // Update the path accordingly
+import { GET_ME } from '../utils/queries'; 
+import { REMOVE_BOOK } from '../utils/mutations'; 
 import {
   Container,
   Card,
@@ -14,9 +14,14 @@ import { removeBookId } from '../utils/localStorage';
 const SavedBooks = () => {
   // Use the useQuery hook to execute the GET_ME query
   const { loading, error, data } = useQuery(GET_ME);
-
+  const savedBooks = data?.me.savedBooks || [];
   // Use the useMutation hook to execute the REMOVE_BOOK mutation
-  const [removeBook] = useMutation(REMOVE_BOOK);
+  const [RemoveBook] = useMutation(REMOVE_BOOK, {
+    refetchQueries: [
+      GET_ME,
+      'Me'
+    ]
+  });
 
   // if data isn't here yet, say so
   if (loading) {
@@ -28,19 +33,12 @@ const SavedBooks = () => {
     return <h2>Error loading data</h2>;
   }
 
-  const userData = data.me;
-
   // create function that accepts the book's mongo _id value as param and deletes the book from the database
   const handleDeleteBook = async (bookId) => {
-    const token = userData ? userData.token : null;
-
-    if (!token) {
-      return false;
-    }
 
     try {
       // Use the removeBook mutation here
-      const { data: { removeBook: updatedUser } } = await removeBook({
+      const { data } = await RemoveBook({
         variables: { bookId: bookId },
       });
 
@@ -64,15 +62,15 @@ const SavedBooks = () => {
       </div>
       <Container>
         <h2 className='pt-5'>
-          {userData.savedBooks.length
-            ? `Viewing ${userData.savedBooks.length} saved ${userData.savedBooks.length === 1 ? 'book' : 'books'}:`
+          {savedBooks.length
+            ? `Viewing ${savedBooks.length} saved ${savedBooks.length === 1 ? 'book' : 'books'}:`
             : 'You have no saved books!'}
         </h2>
         <Row>
-          {userData.savedBooks.map((book) => {
+          {savedBooks.map((book) => {
             return (
-              <Col md="4">
-                <Card key={book.bookId} border='dark'>
+              <Col key={book.bookId} md="4">
+                <Card border='dark'>
                   {book.image ? <Card.Img src={book.image} alt={`The cover for ${book.title}`} variant='top' /> : null}
                   <Card.Body>
                     <Card.Title>{book.title}</Card.Title>
